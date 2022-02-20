@@ -1,5 +1,6 @@
 import pathlib
 import git
+from mainframe import MainFrame
 
 VERSION=0.1
 if __name__ == "__main__":
@@ -11,4 +12,7 @@ if __name__ == "__main__":
     except:
         sha = None
         print('No git folder')
-    print('OMLoader v.%s git %s' % (VERSION, sha))
+    title = 'OMLoader v.%s git %s' % (VERSION, sha)
+    print(title)
+    mf = MainFrame(title)
+    mf.go()
