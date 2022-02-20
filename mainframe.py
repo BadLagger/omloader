@@ -1,5 +1,41 @@
 import tkinter as tk
+from tkinter import ttk
 import json
+
+class PathChooseElement:
+    def __init__(self, title="Some text", row_num=0):
+        self.__lbl = tk.Label(text=title);
+        self.__lbl.grid(row=row_num, column=0, sticky=tk.W, padx=5, pady=3)
+        self.__entry = tk.Entry(width=75)
+        self.__entry.grid(row=row_num, column=1, columnspan=3, sticky=tk.W, pady=3)
+        self.__btn = tk.Button(text='...')
+        self.__btn.grid(row=row_num, column=4, sticky=tk.W, padx=5, pady=3)
+
+class PortElement:
+    def __init__(self, title="Port", row_num=0):
+        self.__lbl = tk.Label(text=title);
+        self.__lbl.grid(row=row_num, column=0, sticky=tk.W, padx=5, pady=3)
+        self.__list = ttk.Combobox()
+        self.__list.grid(row=row_num, column=1, sticky="we", pady=3)
+        self.__check = tk.Checkbutton(text="Со стиранием")
+        self.__check.grid(row=row_num, column=2, sticky="we", pady=3)
+        self.__btn = tk.Button(text='Прошить')
+        self.__btn.grid(row=row_num, column=3, columnspan=2, sticky="we", padx=5, pady=3)
+
+class ProgressBarElement:
+    def __init__(self, row_num=0, max_col=1):
+        self.__style = ttk.Style()
+        self.__style.layout('text.Horizontal.TProgressbar',
+             [('Horizontal.Progressbar.trough',
+               {'children': [('Horizontal.Progressbar.pbar',
+                              {'side': 'left', 'sticky': 'ns'})],
+                'sticky': 'nswe'}),
+              ('Horizontal.Progressbar.label', {'sticky': ''})])
+        self.__style.configure('text.Horizontal.TProgressbar', text='0 %')
+
+        self.__bar = ttk.Progressbar(style="text.Horizontal.TProgressbar", length=100)
+        self.__bar.grid(row=row_num, column=0, columnspan=max_col, sticky="we", padx=5, pady=8)
+
 
 class MainFrame:
     def __init__(self, title='MainFrame'):
@@ -12,6 +48,15 @@ class MainFrame:
                                             self.__cfg['win_y']))
         self.__w.resizable(False, False)
         self.__w.protocol('WM_DELETE_WINDOW', self.__on_clossing_event)
+        # Path elements
+        self.__uuu = PathChooseElement("Путь к UUU:", 0)
+        self.__loader = PathChooseElement("Путь к загрузчику:", 1)
+        self.__fw = PathChooseElement("Путь к прошивке:", 2)
+        # Port element
+        self.__port = PortElement("Порты:", 3)
+        # ProgressBar
+        self.__bar = ProgressBarElement(4, 5)
+
 
     def go(self):
         self.__w.mainloop()
