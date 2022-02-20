@@ -1,11 +1,14 @@
+import pathlib
 import git
 
 VERSION=0.1
-
 if __name__ == "__main__":
+    current_dir = pathlib.Path().resolve()
+    print(current_dir)
     try:
-        sha = git.Repo(search_parent_directory=True).head.object.hexsha
+        repo = git.Repo(current_dir)
+        sha = repo.head.object.hexsha[0:7]
     except:
         sha = None
         print('No git folder')
-    print('OMLoader v.%s: %s' % (VERSION, sha))
+    print('OMLoader v.%s git %s' % (VERSION, sha))
