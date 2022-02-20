@@ -1,4 +1,5 @@
 import tkinter as tk
+from tkinter import filedialog as fd
 from tkinter import ttk
 import json
 
@@ -6,23 +7,55 @@ class PathChooseElement:
     def __init__(self, title="Some text", row_num=0):
         self.__lbl = tk.Label(text=title);
         self.__lbl.grid(row=row_num, column=0, sticky=tk.W, padx=5, pady=3)
-        self.__entry = tk.Entry(width=75)
+        self.__path_var = tk.StringVar()
+        self.__entry = tk.Entry(width=75, textvariable=self.__path_var)
         self.__entry.grid(row=row_num, column=1, columnspan=4, sticky=tk.W, pady=3)
-        self.__btn = tk.Button(text='...')
+        self.__btn = tk.Button(text='...', command=self.__dialog_cmd)
         self.__btn.grid(row=row_num, column=5, sticky=tk.W, padx=5, pady=3)
 
+    def __dialog_cmd(self):
+        last_path = self.__path_var.get()
+        if len(last_path):
+            last_path_dir = '/'.join(last_path.split('/')[0:-1])
+            init_dir = last_path_dir
+        else:
+            init_dir = '/'
+        filename = fd.askopenfilename(title="Выберите файл...", initialdir=init_dir)
+        if len(filename):
+            self.__path_var.set(filename)
+        print(filename, "len : %s" % len(filename))
+
+import serial.tools.list_ports
 class PortElement:
     def __init__(self, title="Port", row_num=0):
         self.__lbl = tk.Label(text=title);
         self.__lbl.grid(row=row_num, column=0, sticky=tk.W, padx=5, pady=3)
-        self.__list = ttk.Combobox()
+        self.__list = ttk.Combobox(state=tk.DISABLED)
         self.__list.grid(row=row_num, column=1, sticky="we", pady=3)
-        self.__check_emmc = tk.Checkbutton(text="EMMC")
+        self.__emmc_var = tk.IntVar()
+        self.__emmc_var.set(1)
+        self.__check_emmc = tk.Checkbutton(text="EMMC", variable=self.__emmc_var, state=tk.DISABLED)
         self.__check_emmc.grid(row=row_num, column=2, sticky="we", pady=3)
-        self.__check = tk.Checkbutton(text="Со стиранием")
+        self.__erase_var = tk.IntVar()
+        self.__check = tk.Checkbutton(text="Со стиранием", variable=self.__erase_var, command=self.__erase_cmd)
         self.__check.grid(row=row_num, column=3, sticky="we", pady=3)
         self.__btn = tk.Button(text='Прошить')
         self.__btn.grid(row=row_num, column=4, columnspan=2, sticky="we", padx=5, pady=3)
+
+    def __erase_cmd(self):
+        if self.__erase_var.get():
+            self.__list["state"] = tk.NORMAL
+            port_values = []
+            ports = serial.tools.list_ports.comports()
+            for port, desc, hwid in sorted(ports):
+                #print("{}: {} [{}]".format(port, desc, hwid))
+                port_values.append(port)
+            self.__list["values"] = port_values
+            self.__list.current(0)
+        else:
+            self.__list["values"] = [""]
+            self.__list.current(0)
+            self.__list["state"] = tk.DISABLED
 
 class ProgressBarElement:
     def __init__(self, row_num=0, max_col=1):
