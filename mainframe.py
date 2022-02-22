@@ -57,6 +57,7 @@ class PathChooseElement:
             self.__path_var.set(filename)
         print(filename, "len : %s" % len(filename))
 
+import serial
 import serial.tools.list_ports
 class PortElement:
     def __init__(self, title="Port", row_num=0, fw_update_cmd=None):
@@ -79,6 +80,48 @@ class PortElement:
 
     def disable_update(self):
         self.__btn['state'] = tk.DISABLED
+
+    def get_erase(self):
+        return self.__erase_var.get()
+
+    def try_erase(self):
+        port = self.__list.get()
+        print(port)
+        interval_sec = 1
+        uboot_wait = False
+        mmc_cmds = [b'mmc dev 0 1\n', b'mmc erase 0 0x2000\n', b'mmc dev 0 2\n', b'mmc erase 0 0x2000\n', b'reset\n']
+        mmc_state = 0
+        with serial.Serial(port, 115200, timeout=interval_sec) as ser:
+            count = 0
+            line = ""
+            while ser.is_open:
+                #count += 1
+                try:
+                    char = ser.read().decode("ascii")
+                except:
+                    char = ''
+                #print(char,end='')
+                line += char
+                if uboot_wait == False:
+                    if char == '\n':
+                        line = ""
+                    else:
+                        if line.find('Hit any key to stop autoboot: ') != -1:
+                            ser.write(b' ')
+                            line = ""
+                            uboot_wait = True
+                else:
+                    print(line)
+                    if line.find('u-boot=>'):
+                        if mmc_state < len(mmc_cmds):
+                            ser.write(mmc_cmds[mmc_state])
+                            mmc_state += 1
+                            line = ""
+                        else:
+                            print('Erasing Done!!!')
+                            return True
+        print('Close port')
+        return False
 
     def __erase_cmd(self):
         if self.__erase_var.get():
@@ -108,7 +151,9 @@ class ProgressBarElement:
         self.__bar = ttk.Progressbar(style="text.Horizontal.TProgressbar", length=100)
         self.__bar.grid(row=row_num, column=0, columnspan=max_col, sticky="we", padx=5, pady=8)
 
-
+import subprocess
+import os
+import time
 class MainFrame:
     def __init__(self, title='MainFrame'):
         self.__w = tk.Tk()
@@ -143,7 +188,23 @@ class MainFrame:
 
     def update_fw(self):
         print('Try update')
-        pass
+        if self.__port.get_erase():
+            print('Try erase')
+            self.__port.try_erase()
+        #os.system("sudo %s -b emmc_all %s %s &> cmdout.txt" % (self.__uuu.get_path(), self.__loader.get_path(), self.__fw.get_path()))
+        #while True:
+        #    last_line = ''
+        #    with open('cmdout.txt') as f:
+        #        for line in f:
+        #            if line.find('1:9'):
+        #                last_line = line
+        #    print(last_line)
+        #    time.sleep(0.1)
+        proc = subprocess.Popen(["sudo", self.__uuu.get_path(), "-b", "emmc_all", self.__loader.get_path(), self.__fw.get_path()], stdout=subprocess.PIPE)
+        while True:
+            line = proc.stdout.read()
+            print(line)
+
 
     def __update_from_entry(self, state, id):
         #print('Entry external callback: %s %d' % (state, id))
