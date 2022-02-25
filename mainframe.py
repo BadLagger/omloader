@@ -111,17 +111,27 @@ class PortElement:
                             line = ""
                             uboot_wait = True
                 else:
-                    print(line)
-                    if line.find('u-boot=>'):
+                    if line.find('u-boot=>') != -1:
+                        print(line)
+                        print("state: %d len: %d" % (mmc_state, len(mmc_cmds)))
                         if mmc_state < len(mmc_cmds):
                             ser.write(mmc_cmds[mmc_state])
                             mmc_state += 1
-                            line = ""
                         else:
+                            print('All cmds send')
+                            #return True
+                        line = ""
+                    else:
+                        #print("Not uboot")
+                        if line.find('resetting') != -1:
+                            print(line)
                             print('Erasing Done!!!')
                             return True
         print('Close port')
         return False
+
+    def change_btn_text(self, txt):
+        self.__btn['text'] = txt
 
     def __erase_cmd(self):
         if self.__erase_var.get():
@@ -147,13 +157,22 @@ class ProgressBarElement:
                               {'side': 'left', 'sticky': 'ns'})],
                 'sticky': 'nswe'}),
               ('Horizontal.Progressbar.label', {'sticky': ''})])
-        self.__style.configure('text.Horizontal.TProgressbar', text='0 %')
+        self.__style.configure('text.Horizontal.TProgressbar', text='No Conection')
         self.__bar = ttk.Progressbar(style="text.Horizontal.TProgressbar", length=100)
         self.__bar.grid(row=row_num, column=0, columnspan=max_col, sticky="we", padx=5, pady=8)
+
+    def set_text(self, txt):
+        self.__style.configure('text.Horizontal.TProgressbar', text=txt)
+
+    def set_val(self, val):
+        self.__bar["value"] = val
 
 import subprocess
 import os
 import time
+from subroute import Subroute
+from threading import Thread
+import platform
 class MainFrame:
     def __init__(self, title='MainFrame'):
         self.__w = tk.Tk()
@@ -181,30 +200,79 @@ class MainFrame:
             self.__loader.set_path(self.__cfg['loader'])
         if self.__cfg.get('fw'):
             self.__fw.set_path(self.__cfg['fw'])
-
+        # Internal flags
+        self.__update_start = False
+        self.__update_th = None
+        self.__stop_update = False
 
     def go(self):
         self.__w.mainloop()
 
     def update_fw(self):
-        print('Try update')
+        if self.__update_start == False:
+            self.__update_start = True
+            self.__port.change_btn_text("Остановить")
+            self.__update_th = Thread(target=self.__update_thread)
+            self.__update_th.start()
+        else:
+            self.__update_start = False
+            self.__stop_update = True
+            self.__update_th.join()
+            self.__bar.set_text('Update was canceled')
+            self.__port.change_btn_text("Прошить")
+
+    def __update_thread(self):
+        print('Update thread bng')
+        self.__bar.set_text('Try to update')
         if self.__port.get_erase():
             print('Try erase')
             self.__port.try_erase()
-        #os.system("sudo %s -b emmc_all %s %s &> cmdout.txt" % (self.__uuu.get_path(), self.__loader.get_path(), self.__fw.get_path()))
-        #while True:
-        #    last_line = ''
-        #    with open('cmdout.txt') as f:
-        #        for line in f:
-        #            if line.find('1:9'):
-        #                last_line = line
-        #    print(last_line)
-        #    time.sleep(0.1)
-        proc = subprocess.Popen(["sudo", self.__uuu.get_path(), "-b", "emmc_all", self.__loader.get_path(), self.__fw.get_path()], stdout=subprocess.PIPE)
-        while True:
-            line = proc.stdout.read()
-            print(line)
-
+        if path.isfile("./cmdoutput.txt"):
+            os.remove("./cmdoutput.txt")
+        pr = Subroute("sudo %s -b emmc_all %s %s &> cmdoutput.txt" % (self.__uuu.get_path(),
+                                                    self.__loader.get_path(),
+                                                    self.__fw.get_path()))
+        l_size = 0
+        while pr.is_online():
+            if self.__stop_update == True:
+                pr.stop()
+                break
+            else:
+                if path.isfile("./cmdoutput.txt"):
+                    f_size = path.getsize("./cmdoutput.txt")
+                    if l_size != f_size:
+                        l_size = f_size
+                        print("File size: %d" % l_size)
+                        with open("./cmdoutput.txt", "br") as f:
+                            count = 200
+                            if count >= l_size:
+                                count = l_size - 10
+                            f.seek(-2, 2)
+                            while f.read(1) != b'%':
+                                f.seek(-2, 1)
+                                if count == 0:
+                                    break
+                                else:
+                                    count -= 1
+                            if count:
+                                f.seek(-3, 1)
+                                count = 1
+                                while f.read(1) != b'm':
+                                    f.seek(-2, 1)
+                                    count += 1
+                                percents = f.read(count).decode('ascii')
+                                print(percents)
+                                self.__bar.set_text('%s %%' % percents)
+                                self.__bar.set_val(int(percents))
+        print('Update thread done')
+        if self.__stop_update == True:
+            self.__stop_update = False
+        else:
+            self.__update_start = False
+            self.__port.change_btn_text("Прошить")
+            self.__bar.set_text('Done!!!')
+            self.__bar.set_val(0)
+        print('done!!!')
 
     def __update_from_entry(self, state, id):
         #print('Entry external callback: %s %d' % (state, id))
@@ -240,6 +308,12 @@ class MainFrame:
 
     def __on_clossing_event(self):
         #print('close')
+        if self.__update_start:
+            self.__update_start = False
+            self.__stop_update = True
+            self.__update_th.join()
+            self.__port.change_btn_text("Прошить")
+
         self.__cfg['win_x'], self.__cfg['win_y'] = self.__w.winfo_x(), self.__w.winfo_y()
         self.__save_cfg()
         self.__w.destroy()
