@@ -2,7 +2,7 @@ import pathlib
 import git
 from mainframe import MainFrame
 
-VERSION=0.1
+VERSION=1.1
 if __name__ == "__main__":
     current_dir = pathlib.Path().resolve()
     print(current_dir)
