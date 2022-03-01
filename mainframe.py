@@ -142,7 +142,8 @@ class PortElement:
                 #print("{}: {} [{}]".format(port, desc, hwid))
                 port_values.append(port)
             self.__list["values"] = port_values
-            self.__list.current(0)
+            if len(port_values) != 0:
+                self.__list.current(0)
         else:
             self.__list["values"] = [""]
             self.__list.current(0)
@@ -229,9 +230,14 @@ class MainFrame:
             self.__port.try_erase()
         if path.isfile("./cmdoutput.txt"):
             os.remove("./cmdoutput.txt")
-        pr = Subroute("sudo %s -b emmc_all %s %s &> cmdoutput.txt" % (self.__uuu.get_path(),
-                                                    self.__loader.get_path(),
-                                                    self.__fw.get_path()))
+        if platform.system() == 'Windows':
+            cmd = "%s -b emmc_all %s %s > cmdoutput.txt"
+        else:
+            cmd = "sudo %s -b emmc_all %s %s &> cmdoutput.txt"
+        print(cmd)
+        pr = Subroute(cmd % (self.__uuu.get_path(),
+                             self.__loader.get_path(),
+                             self.__fw.get_path()))
         l_size = 0
         while pr.is_online():
             if self.__stop_update == True:
