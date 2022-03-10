@@ -84,17 +84,21 @@ class PortElement:
     def get_erase(self):
         return self.__erase_var.get()
 
-    def try_erase(self):
+    def try_erase(self, esc_f=None, prg_f=None):
         port = self.__list.get()
         print(port)
         interval_sec = 1
         uboot_wait = False
         mmc_cmds = [b'mmc dev 0 1\n', b'mmc erase 0 0x2000\n', b'mmc dev 0 2\n', b'mmc erase 0 0x2000\n', b'reset\n']
         mmc_state = 0
+        prg_f('Открытие порта: %s' % port)
         with serial.Serial(port, 115200, timeout=interval_sec) as ser:
             count = 0
             line = ""
             while ser.is_open:
+                if esc_f:
+                    if esc_f():
+                        break
                 #count += 1
                 try:
                     char = ser.read().decode("ascii")
@@ -110,6 +114,9 @@ class PortElement:
                             ser.write(b' ')
                             line = ""
                             uboot_wait = True
+                        else:
+                            if prg_f:
+                                prg_f('Подключение к Uboot')
                 else:
                     if line.find('u-boot=>') != -1:
                         print(line)
@@ -117,6 +124,15 @@ class PortElement:
                         if mmc_state < len(mmc_cmds):
                             ser.write(mmc_cmds[mmc_state])
                             mmc_state += 1
+                            if mmc_state < 2:
+                                if prg_f:
+                                    prg_f('Стирание emmc 1')
+                            elif mmc_state < 4:
+                                if prg_f:
+                                    prg_f('Стирание emmc 2')
+                            else:
+                                if prg_f:
+                                    prg_f('Перезагрузка')
                         else:
                             print('All cmds send')
                             #return True
@@ -218,59 +234,61 @@ class MainFrame:
             self.__update_start = False
             self.__stop_update = True
             self.__update_th.join()
-            self.__bar.set_text('Update was canceled')
+            self.__bar.set_text('Обновление отменено')
             self.__port.change_btn_text("Прошить")
 
     def __update_thread(self):
         print('Update thread bng')
-        self.__bar.set_text('Try to update')
+        self.__bar.set_text('Обновление')
         if self.__port.get_erase():
             print('Try erase')
-            self.__port.try_erase()
-        if path.isfile("./cmdoutput.txt"):
-            os.remove("./cmdoutput.txt")
-        pr = Subroute("sudo %s -b emmc_all %s %s &> cmdoutput.txt" % (self.__uuu.get_path(),
-                                                    self.__loader.get_path(),
-                                                    self.__fw.get_path()))
-        l_size = 0
-        while pr.is_online():
-            if self.__stop_update == True:
-                pr.stop()
-                break
-            else:
-                if path.isfile("./cmdoutput.txt"):
-                    f_size = path.getsize("./cmdoutput.txt")
-                    if l_size != f_size:
-                        l_size = f_size
-                        print("File size: %d" % l_size)
-                        with open("./cmdoutput.txt", "br") as f:
-                            count = 200
-                            if count >= l_size:
-                                count = l_size - 10
-                            f.seek(-2, 2)
-                            while f.read(1) != b'%':
-                                f.seek(-2, 1)
-                                if count == 0:
-                                    break
-                                else:
-                                    count -= 1
-                            if count:
-                                f.seek(-3, 1)
-                                count = 1
-                                while f.read(1) != b'm':
+            if self.__port.try_erase(esc_f=lambda:self.__stop_update, prg_f=self.__bar.set_text) == False:
+                print('Canceled')
+        if self.__stop_update == False:
+            if path.isfile("./cmdoutput.txt"):
+                os.remove("./cmdoutput.txt")
+            pr = Subroute("sudo %s -b emmc_all %s %s &> cmdoutput.txt" % (self.__uuu.get_path(),
+                                                                          self.__loader.get_path(),
+                                                                          self.__fw.get_path()))
+            l_size = 0
+            while pr.is_online():
+                if self.__stop_update == True:
+                    pr.stop()
+                    break
+                else:
+                    if path.isfile("./cmdoutput.txt"):
+                        f_size = path.getsize("./cmdoutput.txt")
+                        if l_size != f_size:
+                            l_size = f_size
+                            print("File size: %d" % l_size)
+                            with open("./cmdoutput.txt", "br") as f:
+                                count = 200
+                                if count >= l_size:
+                                    count = l_size - 10
+                                f.seek(-2, 2)
+                                while f.read(1) != b'%':
                                     f.seek(-2, 1)
-                                    count += 1
-                                percents = f.read(count).decode('ascii')
-                                print(percents)
-                                self.__bar.set_text('%s %%' % percents)
-                                self.__bar.set_val(int(percents))
+                                    if count == 0:
+                                        break
+                                    else:
+                                        count -= 1
+                                if count:
+                                    f.seek(-3, 1)
+                                    count = 1
+                                    while f.read(1) != b'm':
+                                        f.seek(-2, 1)
+                                        count += 1
+                                    percents = f.read(count).decode('ascii')
+                                    print(percents)
+                                    self.__bar.set_text('%s %%' % percents)
+                                    self.__bar.set_val(int(percents))
         print('Update thread done')
         if self.__stop_update == True:
             self.__stop_update = False
         else:
             self.__update_start = False
             self.__port.change_btn_text("Прошить")
-            self.__bar.set_text('Done!!!')
+            self.__bar.set_text('Готово!!!')
             self.__bar.set_val(0)
         print('done!!!')
 
