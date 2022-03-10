@@ -158,7 +158,8 @@ class PortElement:
                 #print("{}: {} [{}]".format(port, desc, hwid))
                 port_values.append(port)
             self.__list["values"] = port_values
-            self.__list.current(0)
+            if len(port_values) != 0:
+                self.__list.current(0)
         else:
             self.__list["values"] = [""]
             self.__list.current(0)
