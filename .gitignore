@@ -1,2 +1,6 @@
 __pycache__
 *.cfg
+*.exe
+*.bin
+*.dll
+*.sdcard
