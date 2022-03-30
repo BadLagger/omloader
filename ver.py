@@ -5,7 +5,7 @@ import inspect
 
 class VersionInspector:
     __version =  0.1
-    __sha = "f62662c"
+    __sha = "579e50b"
 
     def get_version(self):
         return self.__version

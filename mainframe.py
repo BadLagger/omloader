@@ -62,7 +62,7 @@ class MainFrame:
 
     def __update_thread(self):
         print('Update thread bng')
-        self.__bar.set_text('Обновление')
+        self.__bar.set_text('Подождите, идёт обновление...')
         if self.__port.get_erase():
             print('Try erase')
             if self.__port.try_erase(esc_f=self.__stop_update, prg_f=self.__bar.set_text) == False:
@@ -70,10 +70,17 @@ class MainFrame:
         if self.__stop_update == False:
             if path.isfile("./cmdoutput.txt"):
                 os.remove("./cmdoutput.txt")
-            pr = Subroute("sudo %s -b emmc_all %s %s &> cmdoutput.txt" % (self.__uuu.get_path(),
-                                                                          self.__loader.get_path(),
-                                                                          self.__fw.get_path()))
+            cmd_str = ""
+            if platform.system() == 'Linux':
+                 cmd_str = "sudo %s -b emmc_all %s %s &> cmdoutput.txt"
+            else:
+                 cmd_str = "%s -b emmc_all %s %s > cmdoutput.txt"
+            pr = Subroute(cmd_str % (self.__uuu.get_path(),
+                                     self.__loader.get_path(),
+                                     self.__fw.get_path()))
             l_size = 0
+            self.__bar.set_text('Ожидание пожключения USB')
+            count = 0
             while pr.is_online():
                 if self.__stop_update == True:
                     pr.stop()
@@ -84,27 +91,37 @@ class MainFrame:
                         if l_size != f_size:
                             l_size = f_size
                             print("File size: %d" % l_size)
-                            with open("./cmdoutput.txt", "br") as f:
-                                count = 200
-                                if count >= l_size:
-                                    count = l_size - 10
-                                f.seek(-2, 2)
-                                while f.read(1) != b'%':
-                                    f.seek(-2, 1)
-                                    if count == 0:
-                                        break
-                                    else:
-                                        count -= 1
-                                if count:
-                                    f.seek(-3, 1)
-                                    count = 1
-                                    while f.read(1) != b'm':
-                                        f.seek(-2, 1)
-                                        count += 1
-                                    percents = f.read(count).decode('ascii')
-                                    print(percents)
-                                    self.__bar.set_text('%s %%' % percents)
-                                    self.__bar.set_val(int(percents))
+                            if l_size > 200:
+                                msg = 'Подождите, идёт обновление'
+                                if count % 4 == 1:
+                                    msg += '.'
+                                elif count % 4 == 2:
+                                    msg += '..'
+                                elif count % 4 == 3:
+                                    msg += '...'
+                                self.__bar.set_text(msg)
+                                count += 1
+                            #with open("./cmdoutput.txt", "br") as f:
+                            #    count = 200
+                            #    if count >= l_size:
+                            #        count = l_size - 10
+                            #    f.seek(-2, 2)
+                            #    while f.read(1) != b'%':
+                            #        f.seek(-2, 1)
+                            #        if count == 0:
+                            #            break
+                            #        else:
+                            #            count -= 1
+                            #    if count:
+                            #        f.seek(-3, 1)
+                            #        count = 1
+                            #        while f.read(1) != b'm':
+                            #            f.seek(-2, 1)
+                            #            count += 1
+                            #        percents = f.read(count).decode('ascii')
+                            #        print(percents)
+                            #        self.__bar.set_text('%s %%' % percents)
+                            #        self.__bar.set_val(int(percents))
         print('Update thread done')
         if self.__stop_update == True:
             self.__stop_update = False
