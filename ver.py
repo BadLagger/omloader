@@ -4,8 +4,8 @@ import sys
 import inspect
 
 class VersionInspector:
-    __version = None
-    __sha = None
+    __version =  0.1
+    __sha = "f62662c"
 
     def get_version(self):
         return self.__version
