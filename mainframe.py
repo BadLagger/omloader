@@ -65,7 +65,7 @@ class MainFrame:
         self.__bar.set_text('Подождите, идёт обновление...')
         if self.__port.get_erase():
             print('Try erase')
-            if self.__port.try_erase(esc_f=self.__stop_update, prg_f=self.__bar.set_text) == False:
+            if self.__port.try_erase(esc_f=lambda : self.__stop_update, prg_f=self.__bar.set_text) == False:
                 print('Canceled')
         if self.__stop_update == False:
             if path.isfile("./cmdoutput.txt"):
