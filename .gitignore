@@ -1,7 +1,10 @@
 __pycache__
+build
+dist
 *.cfg
 *.exe
 *.bin
 *.dll
 *.sdcard
 *.txt
+*.spec
