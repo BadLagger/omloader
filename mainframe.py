@@ -79,7 +79,7 @@ class MainFrame:
                                      self.__loader.get_path(),
                                      self.__fw.get_path()))
             l_size = 0
-            self.__bar.set_text('Ожидание пожключения USB')
+            self.__bar.set_text('Ожидание подключения USB')
             count = 0
             while pr.is_online():
                 if self.__stop_update == True:
