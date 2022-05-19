@@ -20,7 +20,6 @@ class PortElement:
         self.__check.grid(row=row_num, column=3, sticky="we", pady=3)
         self.__btn = tk.Button(text='Прошить', state=tk.DISABLED, command=fw_update_cmd)
         self.__btn.grid(row=row_num, column=4, columnspan=2, sticky="we", padx=5, pady=3)
-        self.__wait_th = Thread(target=self.__wait_port)
         self.__esc_f = None
         self.__dbg_foo = False
 
@@ -39,6 +38,7 @@ class PortElement:
         self.__esc_f = esc_f
         self.__dbg_foo = prg_f
         self.__dbg('Открытие порта: %s' % self.__list.get())
+        self.__wait_th = Thread(target=self.__wait_port)
         self.__wait_th.start()
         self.__wait_th.join()
         print('Close port')
