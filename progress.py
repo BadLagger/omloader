@@ -9,7 +9,7 @@ class ProgressBarElement:
                               {'side': 'left', 'sticky': 'ns'})],
                 'sticky': 'nswe'}),
               ('Horizontal.Progressbar.label', {'sticky': ''})])
-        self.__style.configure('text.Horizontal.TProgressbar', text='No Conection')
+        self.__style.configure('text.Horizontal.TProgressbar', text='Нет соединения')
         self.__bar = ttk.Progressbar(style="text.Horizontal.TProgressbar", length=100)
         self.__bar.grid(row=row_num, column=0, columnspan=max_col, sticky="we", padx=5, pady=8)
 

@@ -12,7 +12,7 @@ from pathchoose import PathChooseElement
 from port import PortElement
 from progress import ProgressBarElement
 
-class MainFrame:
+class MainFrameEMMC:
     def __init__(self, title='MainFrame'):
         self.__w = tk.Tk()
         self.__w.title(title)
@@ -143,7 +143,7 @@ class MainFrame:
     def __open_cfg(self):
         cfg = {}
         try:
-            with open('oml.cfg') as f:
+            with open('emmc.cfg') as f:
                 cfg = json.load(f)
         except:
             #print("No cfg or corrupted -- use default")
@@ -161,7 +161,7 @@ class MainFrame:
             self.__cfg['loader'] = pathes[1]
         if path.isfile(pathes[2]):
             self.__cfg['fw'] = pathes[2]
-        with open('oml.cfg', 'w') as f:
+        with open('emmc.cfg', 'w') as f:
             json.dump(self.__cfg, f)
 
     def __on_clossing_event(self):
@@ -175,3 +175,82 @@ class MainFrame:
         self.__cfg['win_x'], self.__cfg['win_y'] = self.__w.winfo_x(), self.__w.winfo_y()
         self.__save_cfg()
         self.__w.destroy()
+
+#### Form for work with NAND
+class MainFrameNAND:
+    def __init__(self, title='MainFrame'):
+        self.__w = tk.Tk()
+        self.__w.title(title)
+        self.__cfg = self.__open_cfg()
+        self.__w.geometry("%dx%d+%d+%d" % (self.__cfg['width'],
+                                            self.__cfg['height'],
+                                            self.__cfg['win_x'],
+                                            self.__cfg['win_y']))
+        self.__w.resizable(False, False)
+        self.__w.protocol('WM_DELETE_WINDOW', self.__on_clossing_event)
+        # Path elements
+        #self.__uuu = PathChooseElement("Путь к UUU:", 0, self.__update_from_entry)
+        self.__loader = PathChooseElement("Путь к загрузчику:", 0, self.__update_from_entry)
+        self.__kernel = PathChooseElement("Путь к ядру:", 1, self.__update_from_entry)
+        self.__dtb = PathChooseElement("Путь к dtb:", 2, self.__update_from_entry)
+        self.__rootfs = PathChooseElement("Путь к rootfs:", 3, self.__update_from_entry)
+        self.__allow_update = [False, False, False, False]
+        # Port element
+        self.__port = PortElement("Порты:", 4, self.update_fw)
+        # ProgressBar
+        self.__bar = ProgressBarElement(5, 7)
+
+    def update_fw(self):
+        self.__bar.set_text('Готово!!!')
+
+    def __update_from_entry(self, state, id):
+        #print('Entry external callback: %s %d' % (state, id))
+        self.__allow_update[id] = state
+        if False in self.__allow_update:
+            self.__port.disable_update()
+        else:
+            self.__port.enable_update()
+        #if self.__allow_update[0] and self.__allow_update[1] and self.__allow_update[2]:
+        #    self.__port.enable_update()
+        #else:
+        #    self.__port.disable_update()
+
+    def __open_cfg(self):
+        cfg = {}
+        try:
+            with open('nand.cfg') as f:
+                cfg = json.load(f)
+        except:
+            #print("No cfg or corrupted -- use default")
+            cfg['width'] = 603
+            cfg['height'] = 250
+            cfg['win_x'] = 0
+            cfg['win_y'] = 0
+        return cfg
+
+    def __save_cfg(self):
+        #pathes = [self.__uuu.get_path(), self.__loader.get_path(), self.__fw.get_path()]
+        pathes = ["", "", ""]
+        if path.isfile(pathes[0]):
+            self.__cfg['uuu'] = pathes[0]
+        if path.isfile(pathes[1]):
+            self.__cfg['loader'] = pathes[1]
+        if path.isfile(pathes[2]):
+            self.__cfg['fw'] = pathes[2]
+        with open('nand.cfg', 'w') as f:
+            json.dump(self.__cfg, f)
+
+    def __on_clossing_event(self):
+        #print('close')
+        #if self.__update_start:
+        #    self.__update_start = False
+        #    self.__stop_update = True
+        #    self.__update_th.join()
+        #    self.__port.change_btn_text("Прошить")
+
+        self.__cfg['win_x'], self.__cfg['win_y'] = self.__w.winfo_x(), self.__w.winfo_y()
+        self.__save_cfg()
+        self.__w.destroy()
+
+    def go(self):
+        self.__w.mainloop()
